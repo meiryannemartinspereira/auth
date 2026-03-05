@@ -33,12 +33,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/test")
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
-    public ResponseEntity<String> testProtected() {
-        return ResponseEntity.ok("Protected endpoint works!");
-    }
-
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser() {
         return ResponseEntity.ok(authService.getCurrentUser());
