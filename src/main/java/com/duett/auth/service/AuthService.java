@@ -2,6 +2,7 @@ package com.duett.auth.service;
 
 import com.duett.auth.dto.AuthRequest;
 import com.duett.auth.dto.AuthResponse;
+import com.duett.auth.dto.ChangePasswordRequest;
 import com.duett.auth.dto.RefreshRequest;
 import com.duett.auth.dto.RegisterRequest;
 import com.duett.auth.dto.UserResponse;
@@ -119,5 +120,45 @@ public class AuthService {
                 user.getCpf(),
                 user.getRole()
         );
+    }
+
+    public void logout() {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        User user = repository.findById(userDetails.getId())
+                .orElseThrow(() -> new UserNotFoundException(userDetails.getUsername()));
+
+        user.setTokenVersion(user.getTokenVersion() + 1);
+
+        repository.save(user);
+    }
+
+    public void changePassword(@NonNull ChangePasswordRequest request) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) SecurityContextHolder
+                        .getContext()
+                        .getAuthentication()
+                        .getPrincipal();
+
+        User user = repository.findById(userDetails.getId())
+                .orElseThrow(() -> new UserNotFoundException(userDetails.getUsername()));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        if (!request.newPassword().equals(request.confirmNewPassword())) {
+            throw new RuntimeException("Password confirmation does not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+
+        user.setTokenVersion(user.getTokenVersion() + 1);
+
+        repository.save(user);
     }
 }

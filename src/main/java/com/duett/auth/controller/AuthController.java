@@ -2,6 +2,7 @@ package com.duett.auth.controller;
 
 import com.duett.auth.dto.AuthRequest;
 import com.duett.auth.dto.AuthResponse;
+import com.duett.auth.dto.ChangePasswordRequest;
 import com.duett.auth.dto.RefreshRequest;
 import com.duett.auth.dto.RegisterRequest;
 import com.duett.auth.dto.UserResponse;
@@ -46,6 +47,18 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@NonNull @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        authService.logout();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.noContent().build();
     }
 
 }
