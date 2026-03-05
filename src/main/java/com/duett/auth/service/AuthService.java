@@ -11,10 +11,12 @@ import com.duett.auth.entity.User;
 import com.duett.auth.exception.UserNotFoundException;
 import com.duett.auth.repository.UserRepository;
 import com.duett.auth.security.CustomUserDetails;
+import com.duett.auth.security.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptService loginAttemptService;
 
     public AuthResponse register(@NonNull RegisterRequest request) {
 
@@ -59,12 +62,28 @@ public class AuthService {
 
     public AuthResponse authenticate(@NonNull AuthRequest request) {
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                )
-        );
+        String key = request.email();
+
+        if (loginAttemptService.isBlocked(key)) {
+            throw new RuntimeException("Too many login attempts. Try again later.");
+        }
+
+        try {
+
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.email(),
+                            request.password()
+                    )
+            );
+
+            loginAttemptService.loginSucceeded(key);
+
+        } catch (BadCredentialsException ex) {
+
+            loginAttemptService.loginFailed(key);
+            throw ex;
+        }
 
         User user = repository.findByEmail(request.email())
                 .orElseThrow(() -> new UserNotFoundException(request.email()));
@@ -123,6 +142,7 @@ public class AuthService {
     }
 
     public void logout() {
+
         CustomUserDetails userDetails =
                 (CustomUserDetails) SecurityContextHolder
                         .getContext()
@@ -138,6 +158,7 @@ public class AuthService {
     }
 
     public void changePassword(@NonNull ChangePasswordRequest request) {
+
         CustomUserDetails userDetails =
                 (CustomUserDetails) SecurityContextHolder
                         .getContext()
